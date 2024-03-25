@@ -6,3 +6,7 @@ options:
     description: "Whether to auto start continuous writes on relation events."
     type: boolean
     default: true
+  database_name:
+    description: "Name of database to direct continuous writes to"
+    type: string
+    default: "continuous_writes_database"

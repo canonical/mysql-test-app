@@ -4,7 +4,6 @@
 """Test application literals."""
 
 CONTINUOUS_WRITE_TABLE_NAME = "data"
-DATABASE_NAME = "continuous_writes_database"
 DATABASE_RELATION = "database"
 LEGACY_MYSQL_RELATION = "mysql"  # MariaDB legacy relation
 PEER = "application-peers"

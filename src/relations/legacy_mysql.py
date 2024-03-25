@@ -5,7 +5,7 @@
 
 import logging
 
-from literals import DATABASE_NAME, LEGACY_MYSQL_RELATION
+from literals import LEGACY_MYSQL_RELATION
 from ops import Object, RelationChangedEvent
 from ops.model import BlockedStatus
 
@@ -59,8 +59,10 @@ class LegacyMySQL(Object):
             return
 
         database_name = relation_data["database"]
-        if database_name != DATABASE_NAME:
-            logger.error(f"Database name must be set to `{DATABASE_NAME}`. Modify the test.")
+        if database_name != self.charm.database_name:
+            logger.error(
+                f"Database name must be set to `{self.charm.database_name}`. Modify the test."
+            )
             self.charm.unit.status = BlockedStatus("Wrong database name")
             return
 

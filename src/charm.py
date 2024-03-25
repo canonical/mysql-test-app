@@ -16,6 +16,7 @@ import subprocess
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
+from ops import EventBase
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, Relation, WaitingStatus
@@ -24,7 +25,6 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 from connector import MySQLConnector  # isort: skip
 from literals import (
     CONTINUOUS_WRITE_TABLE_NAME,
-    DATABASE_NAME,
     DATABASE_RELATION,
     LEGACY_MYSQL_RELATION,
     PEER,
@@ -45,6 +45,7 @@ class MySQLTestApplication(CharmBase):
 
         # Charm events
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -75,7 +76,9 @@ class MySQLTestApplication(CharmBase):
         )
 
         # Database related events
-        self.database = DatabaseRequires(self, "database", DATABASE_NAME)
+        self.database = DatabaseRequires(
+            self, relation_name="database", database_name=self.database_name
+        )
         self.framework.observe(
             getattr(self.database.on, "database_created"), self._on_database_created
         )
@@ -120,6 +123,11 @@ class MySQLTestApplication(CharmBase):
         return self._peers.data[self.unit]
 
     @property
+    def database_name(self) -> str:
+        """Returns the database name for the continuous writes."""
+        return self.config["database_name"]
+
+    @property
     def _database_config(self):
         """Returns the database config to use to connect to the MySQL cluster."""
         # identify the database relation
@@ -144,7 +152,7 @@ class MySQLTestApplication(CharmBase):
         config = {
             "user": username,
             "password": password,
-            "database": DATABASE_NAME,
+            "database": self.database_name,
         }
         if endpoints.startswith("file://"):
             config["unix_socket"] = endpoints[7:]
@@ -221,7 +229,7 @@ class MySQLTestApplication(CharmBase):
 
         with MySQLConnector(self._database_config) as cursor:
             cursor.execute(
-                f"SELECT MAX(number) FROM `{DATABASE_NAME}`.`{CONTINUOUS_WRITE_TABLE_NAME}`;"
+                f"SELECT MAX(number) FROM `{self.database_name}`.`{CONTINUOUS_WRITE_TABLE_NAME}`;"
             )
             return cursor.fetchone()[0]
 
@@ -268,6 +276,10 @@ class MySQLTestApplication(CharmBase):
     # ==============
     # Handlers
     # ==============
+    def _on_config_changed(self, event: EventBase) -> None:
+        """Handle config changes, especially database_name."""
+        logger.warning("Please unrelate and re-relate after updating the database_name config")
+
     def _on_start(self, _) -> None:
         """Handle the start event."""
         self.unit.set_workload_version("0.0.2")
@@ -275,6 +287,7 @@ class MySQLTestApplication(CharmBase):
             self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus()
+        self.app_peer_data["initialized"] = "true"
 
     def _on_clear_continuous_writes_action(self, _) -> None:
         """Handle the clear continuous writes action event."""
@@ -284,7 +297,7 @@ class MySQLTestApplication(CharmBase):
         self._stop_continuous_writes()
         with MySQLConnector(self._database_config) as cursor:
             cursor.execute(
-                f"DROP TABLE IF EXISTS `{DATABASE_NAME}`.`{CONTINUOUS_WRITE_TABLE_NAME}`;"
+                f"DROP TABLE IF EXISTS `{self.database_name}`.`{CONTINUOUS_WRITE_TABLE_NAME}`;"
             )
 
     def _on_start_continuous_writes_action(self, _) -> None:
