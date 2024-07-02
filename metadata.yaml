@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: mysql-test-app
+name: test-foo-sdfavnlsdf
 summary: MySQL Test App
 description: |
   MySQL application charm used in various tests.
