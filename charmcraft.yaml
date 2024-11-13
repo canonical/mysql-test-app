@@ -19,4 +19,5 @@ parts:
   charm:
     charm-strict-dependencies: true
     charm-binary-python-packages:
+      # Workaround for https://bugs.mysql.com/bug.php?id=113396
       - mysql-connector-python

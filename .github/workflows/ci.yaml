@@ -39,4 +39,4 @@ jobs:
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v20.0.2
     with:
-      cache: true
+      cache: false  # Workaround for https://github.com/canonical/charmcraft/issues/1389 on charmcraft 2
