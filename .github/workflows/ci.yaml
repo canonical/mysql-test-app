@@ -20,8 +20,8 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v30.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.2.0
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.2.0
