@@ -21,6 +21,9 @@ parts:
     plugin: nil
     build-packages:
       - curl
+      - libffi-dev  # Needed to build Python dependencies with Rust from source to install Poetry
+      - libssl-dev  # Needed to build Python dependencies with Rust from source to install Poetry
+      - pkg-config  # Needed to build Python dependencies with Rust from source to install Poetry
     override-build: |
       # Use environment variable instead of `--break-system-packages` to avoid failing on older
       # versions of pip that do not recognize `--break-system-packages`
