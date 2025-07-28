@@ -21,6 +21,9 @@ parts:
     plugin: nil
     build-packages:
       - curl
+      - libffi-dev  # Needed to build Python dependencies with Rust from source to install Poetry on s390x
+      - libssl-dev  # Needed to build Python dependencies with Rust from source to install Poetry on s390x
+      - pkg-config  # Needed to build Python dependencies with Rust from source to install Poetry on s390x
     override-build: |
       # Use environment variable instead of `--break-system-packages` to avoid failing on older
       # versions of pip that do not recognize `--break-system-packages`
