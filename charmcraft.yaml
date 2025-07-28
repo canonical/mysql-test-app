@@ -52,7 +52,6 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
-    poetry-pip-extra-args: ['--only-binary', 'mysql-connector-python']
     override-build: |
       craftctl default
       # Include requirements.txt in *.charm artifact for easier debugging
