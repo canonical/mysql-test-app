@@ -9,7 +9,7 @@ options:
   database_name:
     description: "Name of database to direct continuous writes to"
     type: string
-    default: "continuous_writes_database"
+    default: "continuous_writes"
   sleep_interval:
     description: "How many milliseconds to sleep between writes"
     default: 0
