@@ -17,7 +17,7 @@ On using the `mysql` legacy relation interface with either [mysql] or [mysql-k8s
 necessary to config the database name with:
 
 ```shell
-> juju config mysql-k8s mysql-interface-database=continuous_writes_database
+> juju config mysql-k8s mysql-interface-database=continuous_writes
 ```
 
 ## Actions
