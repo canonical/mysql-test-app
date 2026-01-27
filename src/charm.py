@@ -44,9 +44,7 @@ class MySQLTestApplication(CharmBase):
         super().__init__(*args)
 
         # Pebble ready event
-        self.framework.observe(
-            self.on.mysql_test_app_pebble_ready, self._on_pebble_ready
-        )
+        self.framework.observe(self.on.mysql_test_app_pebble_ready, self._on_pebble_ready)
 
         # Charm events
         self.framework.observe(self.on.start, self._on_start)
@@ -308,10 +306,12 @@ class MySQLTestApplication(CharmBase):
         """Handle pebble-ready event."""
         # Define the pebble layer
         # Note: We don't define services here because continuous_writes runs as subprocess
-        layer = Layer({
-            "summary": "mysql-test-app layer",
-            "description": "pebble config for mysql-test-app",
-        })
+        layer = Layer(
+            {
+                "summary": "mysql-test-app layer",
+                "description": "pebble config for mysql-test-app",
+            }
+        )
 
         self._container.add_layer("mysql-test-app", layer, combine=True)
         self._container.replan()
