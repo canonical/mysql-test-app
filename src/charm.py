@@ -19,6 +19,7 @@ from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, Relation, WaitingStatus
+from ops.pebble import Layer
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from connector import MySQLConnector, connector  # isort: skip
@@ -41,6 +42,11 @@ class MySQLTestApplication(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        # Pebble ready event
+        self.framework.observe(
+            self.on.mysql_test_app_pebble_ready, self._on_pebble_ready
+        )
 
         # Charm events
         self.framework.observe(self.on.start, self._on_start)
@@ -168,6 +174,18 @@ class MySQLTestApplication(CharmBase):
         return config
 
     @property
+    def _container(self):
+        """Return the mysql-test-app container."""
+        return self.unit.get_container("mysql-test-app")
+
+    def _is_container_ready(self) -> bool:
+        """Check if the container is ready."""
+        try:
+            return self._container.can_connect()
+        except Exception:
+            return False
+
+    @property
     def is_writes_running(self) -> bool:
         """Returns whether continuous writes script is running."""
         return subprocess.run(["pgrep", "-f", "continuous_writes.py"]).returncode == 0
@@ -286,6 +304,34 @@ class MySQLTestApplication(CharmBase):
     # ==============
     # Handlers
     # ==============
+    def _on_pebble_ready(self, event) -> None:
+        """Handle pebble-ready event."""
+        # Define the pebble layer
+        # Note: We don't define services here because continuous_writes runs as subprocess
+        layer = Layer({
+            "summary": "mysql-test-app layer",
+            "description": "pebble config for mysql-test-app",
+        })
+
+        self._container.add_layer("mysql-test-app", layer, combine=True)
+        self._container.replan()
+
+        # Re-evaluate status now that container is ready
+        self._update_status()
+
+    def _update_status(self) -> None:
+        """Update the unit status based on container and database availability."""
+        # CRITICAL: Check container readiness FIRST
+        if not self._is_container_ready():
+            self.unit.status = WaitingStatus("Waiting for container")
+            return
+
+        # Now check database connectivity
+        if self._database_config:
+            self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for database relation")
+
     def _on_config_changed(self, _) -> None:
         """Handle config changes, especially database_name."""
         if self.is_writes_running:
@@ -293,13 +339,17 @@ class MySQLTestApplication(CharmBase):
             self._stop_continuous_writes()
             self._on_start_continuous_writes_action(None)
 
-    def _on_start(self, _) -> None:
+    def _on_start(self, event) -> None:
         """Handle the start event."""
         self.unit.set_workload_version("0.0.2")
-        if self._database_config:
-            self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus()
+
+        # Defer if container not ready
+        if not self._is_container_ready():
+            self.unit.status = WaitingStatus("Waiting for container")
+            event.defer()
+            return
+
+        self._update_status()
 
         if self.unit_peer_data.get(PROC_PID_KEY) and not self.is_writes_running:
             # Auto start writes for restarted unit/container
@@ -361,7 +411,7 @@ class MySQLTestApplication(CharmBase):
             logger.debug("Won't start continuous writes: auto_start_writes is false")
 
     def _on_peer_relation_changed(self, _) -> None:
-        """Handle common post database estabilshed tasks."""
+        """Handle common post database established tasks."""
         if self.app_peer_data.get("database-start") == "true":
             if self.config["auto_start_writes"]:
                 self._start_continuous_writes(1)
@@ -374,21 +424,18 @@ class MySQLTestApplication(CharmBase):
                 # flag should be picked up just once
                 self.app_peer_data["database-start"] = "done"
 
-            self.unit.status = ActiveStatus()
+        self._update_status()
 
     def _on_relation_changed(self, _) -> None:
-        """Handle the database relation broken event."""
-        if self._database_config:
-            self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus()
+        """Handle the database relation changed event."""
+        self._update_status()
 
     def _on_relation_broken(self, _) -> None:
         """Handle the database relation broken event."""
         self._stop_continuous_writes()
         if self.unit.is_leader():
             self.app_peer_data.pop("database-start", None)
-        self.unit.status = WaitingStatus()
+        self._update_status()
 
     def _get_inserted_data(self, event: ActionEvent) -> None:
         """Get random value inserted into the database."""
@@ -396,22 +443,22 @@ class MySQLTestApplication(CharmBase):
 
     def _on_update_status(self, _) -> None:
         """Get last written value and update status."""
+        if not self._is_container_ready():
+            self.unit.status = WaitingStatus("Waiting for container")
+            return
+
         if self.unit_peer_data.get(PROC_PID_KEY):
             try:
                 value = self._max_written_value()
                 if value > 0:
                     logger.info(f"Last written {value=}")
-                    if isinstance(self.unit.status, ActiveStatus):
-                        self.unit.status = ActiveStatus(f"Last written {value=}")
+                    self.unit.status = ActiveStatus(f"Last written {value=}")
                 else:
                     logger.info("No connection data available")
             except Exception:
                 logger.info("Unable to get last written value")
-        elif self._database_config:
-            # available connection data
-            self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus()
+            self._update_status()
 
     def _on_get_client_connection_data(self, event: ActionEvent) -> None:
         """Get the user credentials."""
