@@ -25,5 +25,3 @@ jobs:
   build:
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.2.0
-    with:
-      cache: false  # TODO: cleanup
