@@ -246,6 +246,13 @@ class MySQLTestApplication(CharmBase):
             )
             return cursor.fetchone()[0]
 
+    def _safe_max_written_value(self) -> int:
+        """Return the max value in the continuous writes table, defaulting to 0 on error."""
+        try:
+            return self._max_written_value()
+        except Exception:
+            return 0
+
     def _create_random_value_table(self, cursor) -> None:
         """Create a test table in the database."""
         cursor.execute(
@@ -351,14 +358,18 @@ class MySQLTestApplication(CharmBase):
 
     def _on_endpoints_changed(self, _) -> None:
         """Handle the database endpoints changed event."""
+        if not self._database_config:
+            logger.debug("Endpoints changed but database config not yet available")
+            return
+
         if self.is_writes_running:
             logger.debug("Restarting continuous writes due to endpoints change")
             self._stop_continuous_writes()
-            self._on_start_continuous_writes_action(None)
+            self._start_continuous_writes(self._safe_max_written_value() + 1)
             return
 
         if self.config["auto_start_writes"]:
-            count = self._max_written_value()
+            count = self._safe_max_written_value()
             self._start_continuous_writes(count + 1)
         else:
             logger.debug("Won't start continuous writes: auto_start_writes is false")
