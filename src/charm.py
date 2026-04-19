@@ -13,6 +13,7 @@ import re
 import secrets
 import string
 import subprocess
+from time import sleep
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
@@ -217,8 +218,8 @@ class MySQLTestApplication(CharmBase):
             return None
 
         # Send a SIGKILL to the process and wait for the process to exit
-        proc = subprocess.Popen(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_writes.py"])
-        proc.communicate()
+        subprocess.run(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_writes.py"])
+        sleep(1)
 
         del self.unit_peer_data[PROC_PID_KEY]
 
