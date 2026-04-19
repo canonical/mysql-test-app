@@ -157,6 +157,8 @@ class MySQLTestApplication(CharmBase):
             "user": username,
             "password": password,
             "database": self.database_name,
+            "use_pure": True,
+            "connection_timeout": 10,
         }
         if endpoints.startswith("file://"):
             config["unix_socket"] = endpoints[7:]
