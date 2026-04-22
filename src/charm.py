@@ -13,6 +13,7 @@ import re
 import secrets
 import string
 import subprocess
+from time import sleep
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
@@ -157,6 +158,8 @@ class MySQLTestApplication(CharmBase):
             "user": username,
             "password": password,
             "database": self.database_name,
+            "use_pure": True,
+            "connection_timeout": 10,
         }
         if endpoints.startswith("file://"):
             config["unix_socket"] = endpoints[7:]
@@ -215,8 +218,8 @@ class MySQLTestApplication(CharmBase):
             return None
 
         # Send a SIGKILL to the process and wait for the process to exit
-        proc = subprocess.Popen(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_writes.py"])
-        proc.communicate()
+        subprocess.run(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_writes.py"])
+        sleep(1)
 
         del self.unit_peer_data[PROC_PID_KEY]
 
@@ -242,6 +245,13 @@ class MySQLTestApplication(CharmBase):
                 f"SELECT MAX(number) FROM `{self.database_name}`.`{CONTINUOUS_WRITE_TABLE_NAME}`;"
             )
             return cursor.fetchone()[0]
+
+    def _safe_max_written_value(self) -> int:
+        """Return the max value in the continuous writes table, defaulting to 0 on error."""
+        try:
+            return self._max_written_value()
+        except Exception:
+            return 0
 
     def _create_random_value_table(self, cursor) -> None:
         """Create a test table in the database."""
@@ -348,14 +358,18 @@ class MySQLTestApplication(CharmBase):
 
     def _on_endpoints_changed(self, _) -> None:
         """Handle the database endpoints changed event."""
+        if not self._database_config:
+            logger.warning("Endpoints changed but database config not yet available")
+            return
+
         if self.is_writes_running:
             logger.debug("Restarting continuous writes due to endpoints change")
             self._stop_continuous_writes()
-            self._on_start_continuous_writes_action(None)
+            self._start_continuous_writes(self._safe_max_written_value() + 1)
             return
 
         if self.config["auto_start_writes"]:
-            count = self._max_written_value()
+            count = self._safe_max_written_value()
             self._start_continuous_writes(count + 1)
         else:
             logger.debug("Won't start continuous writes: auto_start_writes is false")
