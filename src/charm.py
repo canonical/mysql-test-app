@@ -359,7 +359,7 @@ class MySQLTestApplication(CharmBase):
     def _on_endpoints_changed(self, _) -> None:
         """Handle the database endpoints changed event."""
         if not self._database_config:
-            logger.debug("Endpoints changed but database config not yet available")
+            logger.warning("Endpoints changed but database config not yet available")
             return
 
         if self.is_writes_running:
