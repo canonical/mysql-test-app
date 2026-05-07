@@ -44,20 +44,17 @@ def continuous_writes(
                 cursor.execute(
                     f"INSERT INTO `{table_name}`(number) VALUES ({next_value_to_insert})"
                 )
-            if sleep_interval:
-                sleep(sleep_interval / 1000)
         except mysql.connector.errors.DatabaseError as e:
             if e.errno == 1062:
                 with MySQLConnector(database_config) as cursor:
                     cursor.execute(f"SELECT max(number) FROM `{table_name}`")
                     result = cursor.fetchall()
                     next_value_to_insert = result[0][0] + 1
-                continue
-            continue
-        except Exception:
-            continue
+        else:
+            next_value_to_insert += 1
 
-        next_value_to_insert += 1
+        if sleep_interval:
+            sleep(sleep_interval / 1000)
 
 
 def main():
