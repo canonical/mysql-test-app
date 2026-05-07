@@ -9,7 +9,7 @@ from typing import Dict
 
 import mysql.connector
 
-from connector import MySQLConnector  # isort: skip
+from connector import MySQLConnector
 
 
 def continuous_writes(
