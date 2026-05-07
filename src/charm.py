@@ -19,7 +19,7 @@ from typing import Dict, Optional
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, Relation, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, Relation
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from connector import MySQLConnector, connector  # isort: skip
@@ -309,7 +309,7 @@ class MySQLTestApplication(CharmBase):
         if self._database_config:
             self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus()
+            self.unit.status = BlockedStatus("Relate with database provider")
 
         if self.unit_peer_data.get(PROC_PID_KEY) and not self.is_writes_running:
             # Auto start writes for restarted unit/container
@@ -395,14 +395,14 @@ class MySQLTestApplication(CharmBase):
         if self._database_config:
             self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus()
+            self.unit.status = BlockedStatus("Relate with database provider")
 
     def _on_relation_broken(self, _) -> None:
         """Handle the database relation broken event."""
         self._stop_continuous_writes()
         if self.unit.is_leader():
             self.app_peer_data.pop("database-start", None)
-        self.unit.status = WaitingStatus()
+        self.unit.status = BlockedStatus("Relate with database provider")
 
     def _get_inserted_data(self, event: ActionEvent) -> None:
         """Get random value inserted into the database."""
@@ -425,7 +425,7 @@ class MySQLTestApplication(CharmBase):
             # available connection data
             self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus()
+            self.unit.status = BlockedStatus("Relate with database provider")
 
     def _on_get_client_connection_data(self, event: ActionEvent) -> None:
         """Get the user credentials."""
