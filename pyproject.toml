@@ -1,19 +1,23 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+[dependency-groups]
+main = [
+    "ops~=2.0",
+    "tenacity~=8.1",
+    "mysql-connector-python~=9.4",
+]
+charm-libs = [
+    # data_platform_libs/v0/data_interfaces.py
+    "ops~=2.0",
+]
+
 [tool.poetry]
 package-mode = false
-requires-poetry = ">=2.0.0"
+requires-poetry = ">=2.2.0"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-ops = "^2.0.0"
-tenacity = "^8.1.0"
-mysql-connector-python = "^9.4.0"
-
-[tool.poetry.group.charm-libs.dependencies]
-# data_platform_libs/v0/data_interfaces.py
-ops = ">=2.0.0"
 
 # Testing tools configuration
 [tool.coverage.run]
