@@ -50,6 +50,9 @@ def continuous_writes(
                     cursor.execute(f"SELECT max(number) FROM `{table_name}`")
                     result = cursor.fetchall()
                     next_value_to_insert = result[0][0] + 1
+        except Exception:
+            # Unexpected exception, ignore it to keep going
+            pass
         else:
             next_value_to_insert += 1
 
