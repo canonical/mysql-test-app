@@ -14,7 +14,7 @@ import secrets
 import string
 import subprocess
 from time import sleep
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
@@ -31,6 +31,8 @@ from literals import (
     PROC_PID_KEY,
     RANDOM_VALUE_KEY,
     RANDOM_VALUE_TABLE_NAME,
+    READ_PROC_PID_KEY,
+    READS_PIPE_PATH,
 )
 from relations.legacy_mysql import LegacyMySQL
 
@@ -171,9 +173,34 @@ class MySQLTestApplication(CharmBase):
         return config
 
     @property
+    def _all_endpoints(self) -> List[str]:
+        """Returns all available endpoints (read-write and read-only) to read from."""
+        if self.model.get_relation(DATABASE_RELATION):
+            data = list(self.database.fetch_relation_data().values())[0]
+            raw = ",".join(filter(None, [data.get("endpoints"), data.get("read-only-endpoints")]))
+        elif self.model.get_relation(LEGACY_MYSQL_RELATION):
+            host = self.app_peer_data.get(f"{LEGACY_MYSQL_RELATION}-host")
+            raw = f"{host}:3306" if host else ""
+        else:
+            return []
+
+        # dedupe while preserving order
+        endpoints = []
+        for endpoint in raw.split(","):
+            endpoint = endpoint.strip()
+            if endpoint and endpoint not in endpoints:
+                endpoints.append(endpoint)
+        return endpoints
+
+    @property
     def is_writes_running(self) -> bool:
         """Returns whether continuous writes script is running."""
         return subprocess.run(["pgrep", "-f", "continuous_writes.py"]).returncode == 0
+
+    @property
+    def is_reads_running(self) -> bool:
+        """Returns whether continuous reads script is running."""
+        return subprocess.run(["pgrep", "-f", "continuous_reads.py"]).returncode == 0
 
     # ==============
     # Helpers
@@ -212,8 +239,54 @@ class MySQLTestApplication(CharmBase):
         self.unit_peer_data[PROC_PID_KEY] = str(proc.pid)
         logger.info("Started continuous writes")
 
+        # Reads track the same lifecycle as writes
+        self._start_continuous_reads()
+
+    def _start_continuous_reads(self) -> None:
+        """Start continuous reads from all endpoints, logging to a named pipe."""
+        if not self._database_config:
+            logger.debug("Won't start continuous reads: missing database config")
+            return
+
+        endpoints = self._all_endpoints
+        if not endpoints:
+            logger.debug("Won't start continuous reads: no endpoints available")
+            return
+
+        self._stop_continuous_reads()
+
+        command = [
+            "venv/bin/python",
+            "src/continuous_reads.py",
+            self._database_config["user"],
+            self._database_config["password"],
+            self._database_config["database"],
+            CONTINUOUS_WRITE_TABLE_NAME,
+            str(self.config["read_interval"]),
+            READS_PIPE_PATH,
+            ",".join(endpoints),
+        ]
+
+        # Run continuous reads in the background
+        proc = subprocess.Popen(command)
+
+        self.unit_peer_data[READ_PROC_PID_KEY] = str(proc.pid)
+        logger.info(f"Started continuous reads, tail {READS_PIPE_PATH}")
+
+    def _stop_continuous_reads(self) -> None:
+        """Stop continuous reads from the MySQL cluster."""
+        if not self.unit_peer_data.get(READ_PROC_PID_KEY):
+            return
+
+        subprocess.run(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_reads.py"])
+        del self.unit_peer_data[READ_PROC_PID_KEY]
+        logger.info("Stop continuous reads")
+
     def _stop_continuous_writes(self) -> Optional[int]:
         """Stop continuous writes to the MySQL cluster and return the last written value."""
+        # Reads track the same lifecycle as writes
+        self._stop_continuous_reads()
+
         if not self.unit_peer_data.get(PROC_PID_KEY):
             return None
 
