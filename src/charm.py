@@ -176,24 +176,18 @@ class MySQLTestApplication(CharmBase):
         return config
 
     @property
-    def _all_endpoints(self) -> List[str]:
+    def _all_endpoints(self) -> set[str]:
         """Returns all available endpoints, used as seeds to discover group members."""
         if self.model.get_relation(DATABASE_RELATION):
             data = list(self.database.fetch_relation_data().values())[0]
-            raw = ",".join(filter(None, [data.get("endpoints"), data.get("read-only-endpoints")]))
+            return set(data.get("endpoints").split(",")) | set(
+                data.get("read-only-endpoints").split(",")
+            )
         elif self.model.get_relation(LEGACY_MYSQL_RELATION):
             host = self.app_peer_data.get(f"{LEGACY_MYSQL_RELATION}-host")
-            raw = f"{host}:3306" if host else ""
+            return set(f"{host}:3306") if host else set()
         else:
-            return []
-
-        # dedupe while preserving order
-        endpoints = []
-        for endpoint in raw.split(","):
-            endpoint = endpoint.strip()
-            if endpoint and endpoint not in endpoints:
-                endpoints.append(endpoint)
-        return endpoints
+            return set()
 
     @property
     def is_writes_running(self) -> bool:
