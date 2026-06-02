@@ -84,7 +84,10 @@ class MySQLTestApplication(CharmBase):
 
         # Database related events
         self.database = DatabaseRequires(
-            self, relation_name="database", database_name=self.database_name
+            self,
+            relation_name="database",
+            database_name=self.database_name,
+            extra_user_roles="charmed_dba",
         )
         self.framework.observe(
             getattr(self.database.on, "database_created"), self._on_database_created
@@ -174,7 +177,7 @@ class MySQLTestApplication(CharmBase):
 
     @property
     def _all_endpoints(self) -> List[str]:
-        """Returns all available endpoints (read-write and read-only) to read from."""
+        """Returns all available endpoints, used as seeds to discover group members."""
         if self.model.get_relation(DATABASE_RELATION):
             data = list(self.database.fetch_relation_data().values())[0]
             raw = ",".join(filter(None, [data.get("endpoints"), data.get("read-only-endpoints")]))
