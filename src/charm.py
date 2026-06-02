@@ -14,7 +14,7 @@ import secrets
 import string
 import subprocess
 from time import sleep
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
