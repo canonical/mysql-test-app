@@ -180,9 +180,12 @@ class MySQLTestApplication(CharmBase):
         """Returns all available endpoints, used as seeds to discover group members."""
         if self.model.get_relation(DATABASE_RELATION):
             data = list(self.database.fetch_relation_data().values())[0]
-            return set(data.get("endpoints").split(",")) | set(
-                data.get("read-only-endpoints").split(",")
-            )
+            endpoints = set(data.get("endpoints").split(","))
+            if ro_endpoints := data.get("read-only-endpoints"):
+                # rw endpoint may be available before ro endpoints
+                # so we test before adding to avoid split on None
+                endpoints = endpoints.union(ro_endpoints.split(","))
+            return endpoints
         elif self.model.get_relation(LEGACY_MYSQL_RELATION):
             host = self.app_peer_data.get(f"{LEGACY_MYSQL_RELATION}-host")
             return set(f"{host}:3306") if host else set()
