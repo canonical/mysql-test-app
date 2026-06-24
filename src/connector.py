@@ -48,8 +48,10 @@ class MySQLConnector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Handle transaction and connection close."""
         del exc_val, exc_tb
-        if self.commit and exc_type is None:
-            self.connection.commit()
-        self.cursor.close()
-        self.connection.close()
-        signal.alarm(0)
+        try:
+            if self.commit and exc_type is None:
+                self.connection.commit()
+            self.cursor.close()
+            self.connection.close()
+        finally:
+            signal.alarm(0)
