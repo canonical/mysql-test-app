@@ -14,3 +14,9 @@ options:
     description: "How many milliseconds to sleep between writes"
     default: 0
     type: int
+  read_interval:
+    description: |
+        How many milliseconds to sleep between continuous reads rounds
+        Use `juju ssh <unit> tail -f /tmp/continuous_reads.pipe` to see reads
+    default: 1000
+    type: int

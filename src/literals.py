@@ -8,5 +8,7 @@ DATABASE_RELATION = "database"
 LEGACY_MYSQL_RELATION = "mysql"  # MariaDB legacy relation
 PEER = "application-peers"
 PROC_PID_KEY = "proc-pid"
+READS_PIPE_PATH = "/tmp/continuous_reads.pipe"
+READ_PROC_PID_KEY = "read-proc-pid"
 RANDOM_VALUE_KEY = "inserted_value"
 RANDOM_VALUE_TABLE_NAME = "random_data"
