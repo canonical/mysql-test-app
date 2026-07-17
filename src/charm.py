@@ -82,7 +82,10 @@ class MySQLTestApplication(CharmBase):
 
         # Database related events
         self.database = DatabaseRequires(
-            self, relation_name="database", database_name=self.database_name
+            charm=self,
+            relation_name="database",
+            database_name=self.database_name,
+            external_node_connectivity=True,
         )
         self.framework.observe(
             getattr(self.database.on, "database_created"), self._on_database_created
