@@ -414,6 +414,10 @@ class MySQLTestApplication(CharmBase):
     def _on_update_status(self, _) -> None:
         """Get last written value and update status."""
         if self.unit_peer_data.get(PROC_PID_KEY):
+            if not self.is_writes_running:
+                # Process died but was not stopped cleanly, restart it
+                logger.info("Continuous writes process not running, restarting")
+                self._on_start_continuous_writes_action(None)
             try:
                 value = self._max_written_value()
                 if value > 0:
