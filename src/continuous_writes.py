@@ -46,10 +46,15 @@ def continuous_writes(
                 )
         except mysql.connector.errors.DatabaseError as e:
             if e.errno == 1062:
-                with MySQLConnector(database_config) as cursor:
-                    cursor.execute(f"SELECT max(number) FROM `{table_name}`")
-                    result = cursor.fetchall()
-                    next_value_to_insert = result[0][0] + 1
+                try:
+                    with MySQLConnector(database_config) as cursor:
+                        cursor.execute(f"SELECT max(number) FROM `{table_name}`")
+                        result = cursor.fetchall()
+                        if result[0][0] is not None:
+                            next_value_to_insert = result[0][0] + 1
+                except Exception:
+                    # Unexpected exception, ignore it to keep going
+                    pass
         except Exception:
             # Unexpected exception, ignore it to keep going
             pass
