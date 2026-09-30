@@ -3,6 +3,10 @@ build/
 *.charm
 .tox/
 .coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
 __pycache__/
 *.py[cod]
 .idea
