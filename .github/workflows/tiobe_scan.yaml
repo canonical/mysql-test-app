@@ -11,31 +11,39 @@ on:
       - fix/address-tiobe-issues #TODO remove before merging to main
 
 jobs:
-  TICS:
+  tiobe-scan:
+    name: Tiobe scan
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions: {}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - name: Create and activate virtual environment
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-venv
+      - name: Install pipx
+        run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
+      - name: Add pipx to PATH
+        run: echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Install tox and poetry using pipx
         run: |
-          python3 -m venv .venv
-          . .venv/bin/activate
-          pip install flake8 poetry pylint pytest tox
-          poetry install --all-groups
-          echo PATH="$PATH" >> "$GITHUB_ENV"
-
+          pipx install tox
+          pipx install poetry
+      - name: Run tox tests to create coverage.xml
+        run: tox run -e unit
+      - name: Move results to necessary folder for TICS
+        run: |
+          mkdir -p .cover
+          mv coverage.xml .cover/cobertura.xml
       - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
           mode: qserver
           project: mysql-test-app
+          branchdir: .
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
-          branchdir: ${{ env.GITHUB_WORKSPACE }}
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}  # zizmor: ignore[secrets-outside-env] Organization secret (does not support environments: https://github.com/orgs/community/discussions/15379)
           installTics: true
           calc: ALL
-          nocalc: UNITTESTCOVERAGE
-    permissions: {}
