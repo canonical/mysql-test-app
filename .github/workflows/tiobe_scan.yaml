@@ -27,6 +27,14 @@ jobs:
           poetry install --all-groups
           echo PATH="$PATH" >> "$GITHUB_ENV"
 
+      - name: Run unit tests to generate coverage.xml
+        run: tox run -e unit
+
+      - name: Move coverage results for TICS
+        run: |
+          mkdir -p .cover
+          mv coverage.xml .cover/cobertura.xml
+
       - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
