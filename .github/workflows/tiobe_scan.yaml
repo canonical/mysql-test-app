@@ -6,7 +6,9 @@ name: Weekly TICS scan
 on:
   schedule:
     - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
-  workflow_dispatch:
+  push:
+    branches:
+      - fix/address-tiobe-issues #TODO remove before merging to main
 
 jobs:
   TICS:
@@ -25,6 +27,14 @@ jobs:
           poetry install --all-groups
           echo PATH="$PATH" >> "$GITHUB_ENV"
 
+      - name: Run unit tests to generate coverage.xml
+        run: tox run -e unit
+
+      - name: Move coverage results for TICS
+        run: |
+          mkdir -p .cover
+          mv coverage.xml .cover/cobertura.xml
+
       - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
@@ -35,5 +45,4 @@ jobs:
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}  # zizmor: ignore[secrets-outside-env] Organization secret (does not support environments: https://github.com/orgs/community/discussions/15379)
           installTics: true
           calc: ALL
-          nocalc: UNITTESTCOVERAGE
     permissions: {}
