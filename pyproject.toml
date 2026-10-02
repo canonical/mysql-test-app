@@ -3,13 +3,18 @@
 
 [dependency-groups]
 main = [
-    "ops~=2.0",
+    "ops>=3.0",
     "tenacity~=8.1",
     "mysql-connector-python~=9.4",
 ]
 charm-libs = [
     # data_platform_libs/v0/data_interfaces.py
-    "ops~=2.0",
+    "ops>=3.0",
+]
+unit = [
+    "pytest",
+    "coverage[toml]",
+    "ops-scenario>=8.0",  # 8.x provides ops.testing.Context for ops >= 3
 ]
 
 [tool.poetry]
