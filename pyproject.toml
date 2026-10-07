@@ -14,7 +14,7 @@ charm-libs = [
 unit = [
     "pytest",
     "coverage[toml]",
-    "ops-scenario>=8.0",  # 8.x provides ops.testing.Context for ops >= 3
+    "ops-scenario~=8.0",  # 8.x provides ops.testing.Context for ops >= 3
 ]
 
 [tool.poetry]
