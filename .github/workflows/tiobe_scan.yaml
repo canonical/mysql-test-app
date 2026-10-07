@@ -6,9 +6,7 @@ name: Weekly TICS scan
 on:
   schedule:
     - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
-  push:
-    branches:
-      - fix/address-tiobe-issues #TODO remove before merging to main
+  workflow_dispatch:
 
 jobs:
   TICS:
